@@ -34,6 +34,7 @@ function getConnectedAddressesFromReplicator(psqlUrl: string, fid: number, ether
 
 /**
  * Get connected addresses for a given FID from a hub
+ * @dev relevant farcaster hub http api docs: https://www.thehubble.xyz/docs/httpapi/verification.html
  * @param hubUrl the hubUrl to be queried
  * @param fid the fid for which the connected addresses are to be queried
  * @param ethereum is ignored as hubs return all addresses anyway
@@ -47,9 +48,41 @@ function getConnectedAddressesFromHub(hubUrl: string, fid: number, ethereum?: bo
         solana: [],
     };
 
-    
-    throw new Error("Not implemented");
+    try {
+        const queryUrl = `${hubUrl}/v1/verificationsByFid?fid=${fid}`;
 
+        /*
+         * TODO: use the queryClient to fetch data from the Hub API endpoint
+         * sample curl command: curl --request GET --url https://hub.pinata.cloud/v1/verificationsByFid?fid=2
+         */
+
+        const verificationResponse = queryClient.somehowGetResponseFrom(queryUrl);
+        
+
+        if (verificationResponse.isOk() && verificationResponse.value) {
+            verificationResponse.messages.forEach((verification) => {
+
+                if (verification.data?.verificationAddAddressBody?.protocol === 0) { // protocol === 0 guarantees only ETH addresses
+                    const addressBytes = verification.data?.verificationAddAddressBody.address;
+                    const address = `0x${Buffer.from(addressBytes).toString('hex')}`;
+                    addresses.all.push(address);
+                    addresses.ethereum.push(address);
+                }
+
+                if (verification.data?.verificationAddAddressBody?.protocol === 1) { // protocol === 1 guarantees only SOL addresses
+                    const addressBytes = verification.data?.verificationAddAddressBody.address;
+                    const address = `${Buffer.from(addressBytes).toString('hex')}`;
+                    addresses.all.push(address);
+                    addresses.solana.push(address);
+                }
+
+            });
+        }
+    } catch (e) {
+        console.error(e);
+        throw new Error("Error getting verifications from hub");
+    }
+    return addresses;
 }
 
 function getConnectedAddressesFromNeynar(provider: NeynarProvider, fid: number, ethereum?: boolean, solana?: boolean): ConnectedAddresses {
