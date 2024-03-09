@@ -1,35 +1,58 @@
-import { queryClient } from "../queryClient";
+import { queryClient } from '../queryClient';
 
-import { Provider, HubProvider, NeynarProvider } from "../providers";
-import { ConnectedAddresses } from "../types";
+import { Provider, HubProvider, NeynarProvider } from '../providers';
+import { ConnectedAddresses } from '../types';
 
-export default function getConnectedAddresses(provider: Provider, fid: number, ethereum?: boolean, solana?: boolean): ConnectedAddresses {
-    let addresses: ConnectedAddresses;
+export default function getConnectedAddresses(
+  provider: Provider,
+  fid: number,
+  ethereum?: boolean,
+  solana?: boolean
+): ConnectedAddresses {
+  let addresses: ConnectedAddresses;
 
-    if (provider instanceof HubProvider) {
-        if (provider.psqlUrl)
-            addresses = getConnectedAddressesFromReplicator(provider.psqlUrl, fid, ethereum, solana);
-        else
-            addresses = getConnectedAddressesFromHub(provider.hubUrl, fid, ethereum, solana);
-    }
-    else if (provider instanceof NeynarProvider) {
-        addresses = getConnectedAddressesFromNeynar(provider, fid, ethereum, solana);
-    }
-    else {
-        throw new Error("Provider not supported");
-    }
+  if (provider instanceof HubProvider) {
+    if (provider.psqlUrl)
+      addresses = getConnectedAddressesFromReplicator(
+        provider.psqlUrl,
+        fid,
+        ethereum,
+        solana
+      );
+    else
+      addresses = getConnectedAddressesFromHub(
+        provider.hubUrl,
+        fid,
+        ethereum,
+        solana
+      );
+  } else if (provider instanceof NeynarProvider) {
+    addresses = getConnectedAddressesFromNeynar(
+      provider,
+      fid,
+      ethereum,
+      solana
+    );
+  } else {
+    throw new Error('Provider not supported');
+  }
 
-    return addresses;
+  return addresses;
 }
 
-function getConnectedAddressesFromReplicator(psqlUrl: string, fid: number, ethereum?: boolean, solana?: boolean): ConnectedAddresses {
-    let addresses: ConnectedAddresses = {
-        all: [],
-        ethereum: [],
-        solana: [],
-    };
-    // ...
-    throw new Error("Not implemented");
+function getConnectedAddressesFromReplicator(
+  psqlUrl: string,
+  fid: number,
+  ethereum?: boolean,
+  solana?: boolean
+): ConnectedAddresses {
+  let addresses: ConnectedAddresses = {
+    all: [],
+    ethereum: [],
+    solana: [],
+  };
+  // ...
+  throw new Error('Not implemented');
 }
 
 /**
@@ -41,58 +64,81 @@ function getConnectedAddressesFromReplicator(psqlUrl: string, fid: number, ether
  * @param solana is ignored as hubs return all addresses anyway
  * @returns ConnectedAddresses for the qiven fid
  */
-function getConnectedAddressesFromHub(hubUrl: string, fid: number, ethereum?: boolean, solana?: boolean): ConnectedAddresses {
-    let addresses: ConnectedAddresses = {
-        all: [],
-        ethereum: [],
-        solana: [],
+function getConnectedAddressesFromHub(
+  hubUrl: string,
+  fid: number,
+  ethereum?: boolean,
+  solana?: boolean
+): ConnectedAddresses {
+  let addresses: ConnectedAddresses = {
+    all: [],
+    ethereum: [],
+    solana: [],
+  };
+
+  try {
+    const fetchVerificationsByFid = async (fid: string) => {
+      const response = await fetch(
+        `${hubUrl}/v1/verificationsByFid?fid=${fid}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      return response.json();
     };
 
-    try {
-        const queryUrl = `${hubUrl}/v1/verificationsByFid?fid=${fid}`;
+    /*
+     * TODO: use the queryClient to fetch data from the Hub API endpoint
+     * sample curl command: curl --request GET --url https://hub.pinata.cloud/v1/verificationsByFid?fid=2
+     */
 
-        /*
-         * TODO: use the queryClient to fetch data from the Hub API endpoint
-         * sample curl command: curl --request GET --url https://hub.pinata.cloud/v1/verificationsByFid?fid=2
-         */
+    const verificationResponse = queryClient.fetchQuery({
+      queryKey: ['verificationsByFid', fid],
+      queryFn: () => fetchVerificationsByFid(fid.toString()),
+    });
 
-        const verificationResponse = queryClient.somehowGetResponseFrom(queryUrl);
-        
-
-        if (verificationResponse.isOk() && verificationResponse.value) {
-            verificationResponse.messages.forEach((verification) => {
-
-                if (verification.data?.verificationAddAddressBody?.protocol === 0) { // protocol === 0 guarantees only ETH addresses
-                    const addressBytes = verification.data?.verificationAddAddressBody.address;
-                    const address = `0x${Buffer.from(addressBytes).toString('hex')}`;
-                    addresses.all.push(address);
-                    addresses.ethereum.push(address);
-                }
-
-                if (verification.data?.verificationAddAddressBody?.protocol === 1) { // protocol === 1 guarantees only SOL addresses
-                    const addressBytes = verification.data?.verificationAddAddressBody.address;
-                    const address = `${Buffer.from(addressBytes).toString('hex')}`;
-                    addresses.all.push(address);
-                    addresses.solana.push(address);
-                }
-
-            });
+    if (verificationResponse.isOk() && verificationResponse.value) {
+      verificationResponse.messages.forEach(verification => {
+        if (verification.data?.verificationAddAddressBody?.protocol === 0) {
+          // protocol === 0 guarantees only ETH addresses
+          const addressBytes =
+            verification.data?.verificationAddAddressBody.address;
+          const address = `0x${Buffer.from(addressBytes).toString('hex')}`;
+          addresses.all.push(address);
+          addresses.ethereum.push(address);
         }
-    } catch (e) {
-        console.error(e);
-        throw new Error("Error getting verifications from hub");
+
+        if (verification.data?.verificationAddAddressBody?.protocol === 1) {
+          // protocol === 1 guarantees only SOL addresses
+          const addressBytes =
+            verification.data?.verificationAddAddressBody.address;
+          const address = `${Buffer.from(addressBytes).toString('hex')}`;
+          addresses.all.push(address);
+          addresses.solana.push(address);
+        }
+      });
     }
-    return addresses;
+  } catch (e) {
+    console.error(e);
+    throw new Error('Error getting verifications from hub');
+  }
+  return addresses;
 }
 
-function getConnectedAddressesFromNeynar(provider: NeynarProvider, fid: number, ethereum?: boolean, solana?: boolean): ConnectedAddresses {
-    let addresses: ConnectedAddresses = {
-        all: [],
-        ethereum: [],
-        solana: [],
-    };
-    // ...
+function getConnectedAddressesFromNeynar(
+  provider: NeynarProvider,
+  fid: number,
+  ethereum?: boolean,
+  solana?: boolean
+): ConnectedAddresses {
+  let addresses: ConnectedAddresses = {
+    all: [],
+    ethereum: [],
+    solana: [],
+  };
+  // ...
 
-
-    throw new Error("Not implemented");
+  throw new Error('Not implemented');
 }
