@@ -3,12 +3,12 @@ import { queryClient } from '../queryClient';
 import { Provider, HubProvider, NeynarProvider } from '../providers';
 import { ConnectedAddresses } from '../types';
 
-export default function getConnectedAddresses(
+export const getConnectedAddresses = (
   provider: Provider,
   fid: number,
   ethereum?: boolean,
   solana?: boolean
-): ConnectedAddresses {
+): ConnectedAddresses => {
   let addresses: ConnectedAddresses;
 
   if (provider instanceof HubProvider) {

@@ -1,0 +1,1 @@
+export { getConnectedAddresses } from "./getConnectedAddresses";
