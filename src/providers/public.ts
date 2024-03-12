@@ -18,10 +18,10 @@ export class PublicProvider extends HubProvider {
     let name: string;
 
     if (providerType === 'pinata') {
-      hubUrl = 'hub-grpc.pinata.cloud';
+      hubUrl = 'https://hub.pinata.cloud';
       name = 'publicPinataHub';
     } else {
-      hubUrl = 'nemes.farcaster.xyz:2283';
+      hubUrl = 'http://nemes.farcaster.xyz:2283';
       name = 'publicFarcasterHub';
     }
     //no psqlUrl since there is no public PostgreSQL Replicator instance
