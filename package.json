@@ -54,7 +54,7 @@
     "typescript": "^5.4.2"
   },
   "dependencies": {
-    "@farcaster/core": "^0.14.6",
+    "@farcaster/core": "^0.14.7",
     "@tanstack/query-core": "^5.25.0",
     "ts-node": "^10.9.2"
   }

@@ -2,6 +2,7 @@ import { queryClient } from '../queryClient';
 
 import { Provider, HubProvider, NeynarProvider } from '../providers';
 import { ConnectedAddresses } from '../types';
+import { Message, Protocol } from '@farcaster/core';
 
 export const getConnectedAddresses = (
   provider: Provider,
@@ -78,18 +79,49 @@ function getConnectedAddressesFromHub(
 
   try {
     const fetchVerificationsByFid = async (fid: string): Promise<ConnectedAddresses> => {
+      if(process.env.DEBUG) { console.log('fetching Verifications from hub:', hubUrl); }
       const response = await fetch(
         `${hubUrl}/v1/verificationsByFid?fid=${fid}`
       );
-      console.log('log response', response);
 
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
 
-      console.log('response JSON', response.json());
+      const data = await response.json();
 
-      return { all: [], ethereum: [], solana: [] } as ConnectedAddresses;
+      data.messages.forEach((verification: Message) => {
+        if(process.env.DEBUG)
+        // debugs PROTOCOL strings needing to be hardcoded as Protocol.ETHEREUM and Protocol.SOLANA in @farcaster/core v0.14.7
+        // are numbers while hubs store strings. For a full run down and issue report read: https://warpcast.com/samuellhuber/0xed8142ec
+        {
+          console.log(verification.data?.verificationAddAddressBody?.protocol, typeof(verification.data?.verificationAddAddressBody?.protocol));
+          console.log(typeof(Protocol.ETHEREUM), typeof(Protocol.SOLANA));
+        }
+        if (verification.data?.verificationAddAddressBody?.protocol.toString() == 'PROTOCOL_ETHEREUM') {
+          console.log('yey ethereum')
+          // protocol === Protcol.ETHEREUM guarantees only ETH addresses
+          const addressBytes =
+            verification.data?.verificationAddAddressBody.address;
+          const address = `0x${Buffer.from(addressBytes).toString('hex')}`;
+          addresses.all.push(address);
+          addresses.ethereum.push(address);
+        }
+
+        if (verification.data?.verificationAddAddressBody?.protocol.toString() == 'PROTOCOL_SOLANA') {
+          console.log('yey solana')
+          // protocol === Protocol.SOLANA guarantees only SOL addresses
+          const addressBytes =
+            verification.data?.verificationAddAddressBody.address;
+          const address = `${Buffer.from(addressBytes).toString('hex')}`;
+          addresses.all.push(address);
+          addresses.solana.push(address);
+        }
+      });
+
+      console.log('addresses in by Hub', addresses);
+
+      return addresses;
     };
 
     const verificationResponse = queryClient.fetchQuery({
@@ -98,27 +130,7 @@ function getConnectedAddressesFromHub(
     });
 
     // if (verificationResponse.isOk() && verificationResponse.value) {
-    //   verificationResponse.messages.forEach(verification: VerificationAddAddressBody => {
-    //     if (verification.data?.verificationAddAddressBody?.protocol === 0) {
-    //       // protocol === 0 guarantees only ETH addresses
-    //       const addressBytes =
-    //         verification.data?.verificationAddAddressBody.address;
-    //       const address = `0x${Buffer.from(addressBytes).toString('hex')}`;
-    //       addresses.all.push(address);
-    //       addresses.ethereum.push(address);
-    //     }
-
-    //     if (verification.data?.verificationAddAddressBody?.protocol === 1) {
-    //       // protocol === 1 guarantees only SOL addresses
-    //       const addressBytes =
-    //         verification.data?.verificationAddAddressBody.address;
-    //       const address = `${Buffer.from(addressBytes).toString('hex')}`;
-    //       addresses.all.push(address);
-    //       addresses.solana.push(address);
-    //     }
-    //   });
-    // }
-  } catch (e) {
+    } catch (e) {
     console.error(e);
     throw new Error('Error getting verifications from hub');
   }
