@@ -1,6 +1,7 @@
 {
   "version": "0.1.0",
   "license": "MIT",
+  "type": "module",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "files": [
@@ -53,6 +54,8 @@
     "typescript": "^5.4.2"
   },
   "dependencies": {
-    "@tanstack/query-core": "^5.25.0"
+    "@farcaster/core": "^0.14.6",
+    "@tanstack/query-core": "^5.25.0",
+    "ts-node": "^10.9.2"
   }
 }

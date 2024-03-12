@@ -77,49 +77,47 @@ function getConnectedAddressesFromHub(
   };
 
   try {
-    const fetchVerificationsByFid = async (fid: string) => {
+    const fetchVerificationsByFid = async (fid: string): Promise<ConnectedAddresses> => {
       const response = await fetch(
         `${hubUrl}/v1/verificationsByFid?fid=${fid}`
       );
+      console.log('log response', response);
 
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
 
-      return response.json();
-    };
+      console.log('response JSON', response.json());
 
-    /*
-     * TODO: use the queryClient to fetch data from the Hub API endpoint
-     * sample curl command: curl --request GET --url https://hub.pinata.cloud/v1/verificationsByFid?fid=2
-     */
+      return { all: [], ethereum: [], solana: [] } as ConnectedAddresses;
+    };
 
     const verificationResponse = queryClient.fetchQuery({
       queryKey: ['verificationsByFid', fid],
       queryFn: () => fetchVerificationsByFid(fid.toString()),
     });
 
-    if (verificationResponse.isOk() && verificationResponse.value) {
-      verificationResponse.messages.forEach(verification => {
-        if (verification.data?.verificationAddAddressBody?.protocol === 0) {
-          // protocol === 0 guarantees only ETH addresses
-          const addressBytes =
-            verification.data?.verificationAddAddressBody.address;
-          const address = `0x${Buffer.from(addressBytes).toString('hex')}`;
-          addresses.all.push(address);
-          addresses.ethereum.push(address);
-        }
+    // if (verificationResponse.isOk() && verificationResponse.value) {
+    //   verificationResponse.messages.forEach(verification: VerificationAddAddressBody => {
+    //     if (verification.data?.verificationAddAddressBody?.protocol === 0) {
+    //       // protocol === 0 guarantees only ETH addresses
+    //       const addressBytes =
+    //         verification.data?.verificationAddAddressBody.address;
+    //       const address = `0x${Buffer.from(addressBytes).toString('hex')}`;
+    //       addresses.all.push(address);
+    //       addresses.ethereum.push(address);
+    //     }
 
-        if (verification.data?.verificationAddAddressBody?.protocol === 1) {
-          // protocol === 1 guarantees only SOL addresses
-          const addressBytes =
-            verification.data?.verificationAddAddressBody.address;
-          const address = `${Buffer.from(addressBytes).toString('hex')}`;
-          addresses.all.push(address);
-          addresses.solana.push(address);
-        }
-      });
-    }
+    //     if (verification.data?.verificationAddAddressBody?.protocol === 1) {
+    //       // protocol === 1 guarantees only SOL addresses
+    //       const addressBytes =
+    //         verification.data?.verificationAddAddressBody.address;
+    //       const address = `${Buffer.from(addressBytes).toString('hex')}`;
+    //       addresses.all.push(address);
+    //       addresses.solana.push(address);
+    //     }
+    //   });
+    // }
   } catch (e) {
     console.error(e);
     throw new Error('Error getting verifications from hub');
