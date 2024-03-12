@@ -125,8 +125,7 @@ function getConnectedAddressesFromHub(
       queryFn: () => fetchVerificationsByFid(fid.toString()),
     }).then( (res) => { return res; });
 
-    // if (verificationResponse.isOk() && verificationResponse.value) {
-    } catch (e) {
+  } catch (e) {
     console.error(e);
     throw new Error('Error getting verifications from hub');
   }
@@ -144,7 +143,48 @@ function getConnectedAddressesFromNeynar(
     ethereum: [],
     solana: [],
   };
-  // ...
+  
+  try {
+    const fetchVerificationsByFid = async (fid: string): Promise<ConnectedAddresses> => {
+      let addresses: ConnectedAddresses = {
+        all: [],
+        ethereum: [],
+        solana: [],
+      };
+      if(process.env.DEBUG) { console.log('fetching Verifications from neynar:', provider.endPoint); }
+      const response = await fetch(
+        `${provider.endPoint}/v2//farcaster/user/bulk?fids=${fid}`,
+        {
+          headers: {
+            "accept": "application/json",
+            "api_key": provider.apiKey,
+          }
+        }
+      );
 
-  throw new Error('Not implemented');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+
+      //hardcoding user 0 as we only query one
+      addresses.all = data.users[0].verifications;
+      addresses.ethereum = data.users[0].verified_addresses.eth_addresses;
+      addresses.solana = data.users[0].verified_addresses.sol_addresses;
+
+      return addresses;
+    };
+
+    addresses = queryClient.fetchQuery({
+      queryKey: ['verificationsByFid', fid],
+      queryFn: () => fetchVerificationsByFid(fid.toString()),
+    }).then( (res) => { return res; });
+
+  } catch (e) {
+    console.error(e);
+    throw new Error('Error getting verifications from hub');
+  }
+
+  return addresses;
 }
