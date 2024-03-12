@@ -99,7 +99,6 @@ function getConnectedAddressesFromHub(
           console.log(typeof(Protocol.ETHEREUM), typeof(Protocol.SOLANA));
         }
         if (verification.data?.verificationAddAddressBody?.protocol.toString() == 'PROTOCOL_ETHEREUM') {
-          console.log('yey ethereum')
           // protocol === Protcol.ETHEREUM guarantees only ETH addresses
           const addressBytes =
             verification.data?.verificationAddAddressBody.address;
@@ -109,7 +108,6 @@ function getConnectedAddressesFromHub(
         }
 
         if (verification.data?.verificationAddAddressBody?.protocol.toString() == 'PROTOCOL_SOLANA') {
-          console.log('yey solana')
           // protocol === Protocol.SOLANA guarantees only SOL addresses
           const addressBytes =
             verification.data?.verificationAddAddressBody.address;
@@ -119,15 +117,13 @@ function getConnectedAddressesFromHub(
         }
       });
 
-      console.log('addresses in by Hub', addresses);
-
       return addresses;
     };
 
-    const verificationResponse = queryClient.fetchQuery({
+    addresses = queryClient.fetchQuery({
       queryKey: ['verificationsByFid', fid],
       queryFn: () => fetchVerificationsByFid(fid.toString()),
-    });
+    }).then( (res) => { return res; });
 
     // if (verificationResponse.isOk() && verificationResponse.value) {
     } catch (e) {
