@@ -9,26 +9,24 @@ export const getConnectedAddresses = (
   fid: number,
   ethereum?: boolean,
   solana?: boolean
-): ConnectedAddresses => {
-  let addresses: ConnectedAddresses;
-
+): Promise<ConnectedAddresses> => {
   if (provider instanceof HubProvider) {
     if (provider.psqlUrl)
-      addresses = getConnectedAddressesFromReplicator(
+      return getConnectedAddressesFromReplicator(
         provider.psqlUrl,
         fid,
         ethereum,
         solana
       );
     else
-      addresses = getConnectedAddressesFromHub(
+      return getConnectedAddressesFromHub(
         provider.hubUrl,
         fid,
         ethereum,
         solana
       );
   } else if (provider instanceof NeynarProvider) {
-    addresses = getConnectedAddressesFromNeynar(
+    return getConnectedAddressesFromNeynar(
       provider,
       fid,
       ethereum,
@@ -37,8 +35,6 @@ export const getConnectedAddresses = (
   } else {
     throw new Error('Provider not supported');
   }
-
-  return addresses;
 }
 
 function getConnectedAddressesFromReplicator(
@@ -46,12 +42,7 @@ function getConnectedAddressesFromReplicator(
   fid: number,
   ethereum?: boolean,
   solana?: boolean
-): ConnectedAddresses {
-  let addresses: ConnectedAddresses = {
-    all: [],
-    ethereum: [],
-    solana: [],
-  };
+): Promise<ConnectedAddresses> {
   // ...
   throw new Error('Not implemented');
 }
@@ -70,15 +61,16 @@ function getConnectedAddressesFromHub(
   fid: number,
   ethereum?: boolean,
   solana?: boolean
-): ConnectedAddresses {
-  let addresses: ConnectedAddresses = {
-    all: [],
-    ethereum: [],
-    solana: [],
-  };
+): Promise<ConnectedAddresses> {
 
   try {
     const fetchVerificationsByFid = async (fid: string): Promise<ConnectedAddresses> => {
+      let addresses: ConnectedAddresses = {
+        all: [],
+        ethereum: [],
+        solana: [],
+      };
+
       if(process.env.DEBUG) { console.log('fetching Verifications from hub:', hubUrl); }
       const response = await fetch(
         `${hubUrl}/v1/verificationsByFid?fid=${fid}`
@@ -120,7 +112,7 @@ function getConnectedAddressesFromHub(
       return addresses;
     };
 
-    addresses = queryClient.fetchQuery({
+    return queryClient.fetchQuery({
       queryKey: ['verificationsByFid', fid],
       queryFn: () => fetchVerificationsByFid(fid.toString()),
     }).then( (res) => { return res; });
@@ -129,7 +121,6 @@ function getConnectedAddressesFromHub(
     console.error(e);
     throw new Error('Error getting verifications from hub');
   }
-  return addresses;
 }
 
 function getConnectedAddressesFromNeynar(
@@ -137,12 +128,7 @@ function getConnectedAddressesFromNeynar(
   fid: number,
   ethereum?: boolean,
   solana?: boolean
-): ConnectedAddresses {
-  let addresses: ConnectedAddresses = {
-    all: [],
-    ethereum: [],
-    solana: [],
-  };
+): Promise<ConnectedAddresses> {
   
   try {
     const fetchVerificationsByFid = async (fid: string): Promise<ConnectedAddresses> => {
@@ -151,6 +137,7 @@ function getConnectedAddressesFromNeynar(
         ethereum: [],
         solana: [],
       };
+
       if(process.env.DEBUG) { console.log('fetching Verifications from neynar:', provider.endPoint); }
       const response = await fetch(
         `${provider.endPoint}/v2//farcaster/user/bulk?fids=${fid}`,
@@ -176,15 +163,13 @@ function getConnectedAddressesFromNeynar(
       return addresses;
     };
 
-    addresses = queryClient.fetchQuery({
+    return queryClient.fetchQuery({
       queryKey: ['verificationsByFid', fid],
       queryFn: () => fetchVerificationsByFid(fid.toString()),
-    }).then( (res) => { return res; });
+    });
 
   } catch (e) {
     console.error(e);
     throw new Error('Error getting verifications from hub');
   }
-
-  return addresses;
 }
